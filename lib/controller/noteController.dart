@@ -8,18 +8,26 @@ import 'package:note_app/model/model.dart';
 class NoteController extends GetxController {
   TextEditingController addnote = TextEditingController();
 
-  @override
-  void onInit() {
-    // TODO: implement onInit
-    super.onInit();
-    getNote();
-  }
-
   final noteList = <NoteModel>[].obs;
 
   final auth = FirebaseAuth.instance;
   final db = FirebaseFirestore.instance;
-  AuthController authController = Get.put(AuthController());
+  final AuthController authController = Get.find();
+
+  @override
+  Future<void> onInit() async {
+    super.onInit();
+    FirebaseAuth.instance.authStateChanges().listen((user) {
+      if (user != null) {
+        getNote();
+      } else {
+        noteList.clear();
+      }
+    });
+    if (auth.currentUser != null) {
+      await getNote();
+    }
+  }
 
   void showAddNoteDialog() {
     Get.defaultDialog(
@@ -34,11 +42,13 @@ class NoteController extends GetxController {
       textCancel: "Cancel",
       confirmTextColor: Colors.white,
       onConfirm: () {
-        // Add your note here
-        addNote();
-        getNote();
-        addnote.clear();
-        Get.back();
+        if (addnote.text.isNotEmpty) {
+          addNote();
+          addnote.clear();
+          Get.back();
+        } else {
+          Get.snackbar("Error", "Note cannot be empty");
+        }
       },
       onCancel: () {
         addnote.clear();
@@ -46,7 +56,7 @@ class NoteController extends GetxController {
     );
   }
 
-  void addNote() async {
+  Future<void> addNote() async {
     var notemodel = NoteModel(
       note: addnote.text,
       userName: authController.userName.text,
@@ -58,27 +68,24 @@ class NoteController extends GetxController {
         .collection("note")
         .add(notemodel.toJson());
 
-    getNote();
-
     Get.snackbar("To do Added", "To do Added to Firestore",
         backgroundColor: Colors.green);
   }
-  // getnote from fireStrore
 
   Future<void> getNote() async {
     try {
+      noteList.clear();
       var data = await db
           .collection("users")
           .doc(auth.currentUser!.uid)
           .collection("note")
           .get();
-      noteList.clear();
 
       for (var note in data.docs) {
         noteList.add(NoteModel.fromJson(note.data()));
       }
     } catch (ex) {
-      Get.snackbar("Error", ex.toString());
+      Get.snackbar("Error to get note", ex.toString());
     }
   }
 }

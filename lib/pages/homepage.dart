@@ -28,7 +28,12 @@ class HomePage extends StatelessWidget {
                 authController.logout();
                 Get.offAll(Welcome());
               },
-              icon: Icon(Icons.logout))
+              icon: Icon(Icons.logout)),
+          IconButton(
+              onPressed: () {
+                noteController.getNote();
+              },
+              icon: Icon(Icons.refresh))
         ],
         backgroundColor: Colors.amber,
       ),
